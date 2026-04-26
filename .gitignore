@@ -1,0 +1,4 @@
+bin/
+obj/
+.appdata/
+.nuget/

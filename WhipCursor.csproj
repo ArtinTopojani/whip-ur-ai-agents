@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetPlatformVersion>7.0</TargetPlatformVersion>
+    <TargetPlatformMoniker>Windows,Version=7.0</TargetPlatformMoniker>
+    <TargetPlatformDisplayName>Windows</TargetPlatformDisplayName>
+    <TargetPlatformSdkPath>$(MSBuildProjectDirectory)\</TargetPlatformSdkPath>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>WhipCursor</AssemblyName>
+    <RootNamespace>WhipCursor</RootNamespace>
+    <RestoreConfigFile>$(MSBuildProjectDirectory)\NuGet.Config</RestoreConfigFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="whip.mov">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>
