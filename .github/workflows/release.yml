@@ -1,0 +1,60 @@
+name: Build Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows-installer:
+    name: Build Windows installer zip
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Publish app
+        shell: pwsh
+        run: |
+          dotnet publish .\WhipCursor.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:DebugType=none `
+            -p:DebugSymbols=false `
+            --output .\dist\publish\WhipCursor-win-x64
+
+      - name: Prepare installer folder
+        shell: pwsh
+        run: |
+          $release = ".\dist\WhipCursor-Installer"
+          New-Item -ItemType Directory -Force -Path "$release\app" | Out-Null
+          Copy-Item ".\dist\publish\WhipCursor-win-x64\*" "$release\app" -Recurse -Force
+          Copy-Item ".\installer\Install Whip Cursor.cmd" "$release\Install Whip Cursor.cmd" -Force
+          Copy-Item ".\installer\Uninstall Whip Cursor.cmd" "$release\Uninstall Whip Cursor.cmd" -Force
+          Compress-Archive -Path "$release\*" -DestinationPath ".\dist\WhipCursor-Installer.zip" -Force
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WhipCursor-Installer
+          path: .\dist\WhipCursor-Installer.zip
+
+      - name: Attach zip to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: .\dist\WhipCursor-Installer.zip
