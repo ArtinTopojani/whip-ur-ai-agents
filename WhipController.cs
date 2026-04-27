@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.IO;
+using System.Windows.Media;
 using System.Windows.Forms;
 using WpfApplication = System.Windows.Application;
 
@@ -7,19 +8,24 @@ namespace WhipCursor;
 
 public sealed class WhipController : IDisposable
 {
+    private static readonly TimeSpan WhipSoundDelay = TimeSpan.FromSeconds(0.6);
+
     private readonly WpfApplication _app;
     private readonly GlobalInputHook _inputHook;
     private readonly NotifyIcon _trayIcon;
     private readonly ToolStripMenuItem _armedItem;
-    private readonly string _videoPath;
+    private readonly string _framesPath;
+    private readonly string _sfxPath;
     private readonly WhipAnimation _animation;
+    private readonly List<MediaPlayer> _activeSounds = [];
     private bool _disposed;
 
     public WhipController(WpfApplication app)
     {
         _app = app;
-        _videoPath = FindVideoPath();
-        _animation = QuickTimeAnimationDecoder.Load(_videoPath);
+        _framesPath = FindAssetPath("Assets", "Video");
+        _sfxPath = FindAssetPath("Assets", "Sfx", "whipsfx.mp3");
+        _animation = PngAnimationLoader.Load(_framesPath);
 
         _armedItem = new ToolStripMenuItem("Armed", null, (_, _) => ToggleArmed())
         {
@@ -73,27 +79,58 @@ public sealed class WhipController : IDisposable
 
     private void HandleLeftMouseDown(ScreenPoint point)
     {
-        if (!IsArmed || !File.Exists(_videoPath))
+        if (!IsArmed)
         {
             return;
         }
 
         _app.Dispatcher.BeginInvoke(() =>
         {
+            PlaySfxAfterDelay();
             var window = new WhipWindow(_animation, point);
             window.Show();
         });
     }
 
-    private static string FindVideoPath()
+    private async void PlaySfxAfterDelay()
     {
-        var basePath = Path.Combine(AppContext.BaseDirectory, "whip.mov");
-        if (File.Exists(basePath))
+        await Task.Delay(WhipSoundDelay);
+        if (!_disposed)
         {
-            return basePath;
+            PlaySfx();
+        }
+    }
+
+    private void PlaySfx()
+    {
+        if (!File.Exists(_sfxPath))
+        {
+            return;
         }
 
-        return Path.Combine(Environment.CurrentDirectory, "whip.mov");
+        var player = new MediaPlayer();
+        player.Open(new Uri(_sfxPath, UriKind.Absolute));
+        player.MediaEnded += (_, _) => CleanupSound(player);
+        player.MediaFailed += (_, _) => CleanupSound(player);
+        _activeSounds.Add(player);
+        player.Play();
+    }
+
+    private void CleanupSound(MediaPlayer player)
+    {
+        player.Close();
+        _activeSounds.Remove(player);
+    }
+
+    private static string FindAssetPath(params string[] parts)
+    {
+        var outputPath = Path.Combine([AppContext.BaseDirectory, .. parts]);
+        if (Directory.Exists(outputPath) || File.Exists(outputPath))
+        {
+            return outputPath;
+        }
+
+        return Path.Combine([Environment.CurrentDirectory, .. parts]);
     }
 
     public void Dispose()
@@ -105,6 +142,11 @@ public sealed class WhipController : IDisposable
 
         _disposed = true;
         _inputHook.Dispose();
+        foreach (var player in _activeSounds.ToList())
+        {
+            CleanupSound(player);
+        }
+
         _trayIcon.Visible = false;
         _trayIcon.Dispose();
     }
