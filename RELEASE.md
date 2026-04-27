@@ -17,4 +17,6 @@ git push origin v1.0.0
 5. Go to **Releases**.
 6. Edit the new release if you want nicer notes.
 
-Users should download `WhipCursor-Installer.zip`, extract it, and run `Install Whip Cursor.cmd`.
+Users can also download the GitHub ZIP, extract it, and run `Run Whip Cursor.cmd`.
+
+The local release helper scripts live in `tools/`.

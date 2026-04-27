@@ -1,6 +1,7 @@
 @echo off
 setlocal
-cd /d "%~dp0"
+cd /d "%~dp0.."
+set "ROOT=%CD%"
 
 where dotnet >nul 2>nul
 if errorlevel 1 (
@@ -22,19 +23,19 @@ echo.
 choice /C YN /M "Continue and allow downloads if needed"
 if errorlevel 2 exit /b 1
 
-set "APPDATA=%~dp0.appdata"
-set "NUGET_PACKAGES=%~dp0.nuget\packages"
-set "PUBLISH=%~dp0dist\publish\WhipCursor-win-x64"
-set "RELEASE=%~dp0dist\WhipCursor-Installer"
-set "ZIP=%~dp0dist\WhipCursor-Installer.zip"
+set "APPDATA=%ROOT%\.appdata"
+set "NUGET_PACKAGES=%ROOT%\.nuget\packages"
+set "PUBLISH=%ROOT%\dist\publish\WhipCursor-win-x64"
+set "RELEASE=%ROOT%\dist\WhipCursor-Installer"
+set "ZIP=%ROOT%\dist\WhipCursor-Installer.zip"
 
 if not exist "%APPDATA%\NuGet" mkdir "%APPDATA%\NuGet"
-copy /Y "%~dp0NuGet.Portable.Config" "%APPDATA%\NuGet\NuGet.Config" >nul
+copy /Y "%ROOT%\NuGet.Portable.Config" "%APPDATA%\NuGet\NuGet.Config" >nul
 
-dotnet restore "%~dp0WhipCursor.csproj" --runtime win-x64 --configfile "%~dp0NuGet.Portable.Config"
+dotnet restore "%ROOT%\WhipCursor.csproj" --runtime win-x64 --configfile "%ROOT%\NuGet.Portable.Config"
 if errorlevel 1 pause & exit /b 1
 
-dotnet publish "%~dp0WhipCursor.csproj" --configuration Release --runtime win-x64 --self-contained true --no-restore -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -p:DebugSymbols=false --output "%PUBLISH%"
+dotnet publish "%ROOT%\WhipCursor.csproj" --configuration Release --runtime win-x64 --self-contained true --no-restore -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -p:DebugSymbols=false --output "%PUBLISH%"
 if errorlevel 1 pause & exit /b 1
 
 if exist "%RELEASE%" rmdir /S /Q "%RELEASE%"
@@ -47,8 +48,8 @@ if %ERRORLEVEL% GEQ 8 (
   exit /b 1
 )
 
-copy /Y "%~dp0installer\Install Whip Cursor.cmd" "%RELEASE%\Install Whip Cursor.cmd" >nul
-copy /Y "%~dp0installer\Uninstall Whip Cursor.cmd" "%RELEASE%\Uninstall Whip Cursor.cmd" >nul
+copy /Y "%ROOT%\installer\Install Whip Cursor.cmd" "%RELEASE%\Install Whip Cursor.cmd" >nul
+copy /Y "%ROOT%\installer\Uninstall Whip Cursor.cmd" "%RELEASE%\Uninstall Whip Cursor.cmd" >nul
 
 if exist "%ZIP%" del /Q "%ZIP%"
 powershell -NoProfile -ExecutionPolicy Bypass -Command "Compress-Archive -Path '%RELEASE%\*' -DestinationPath '%ZIP%' -Force"

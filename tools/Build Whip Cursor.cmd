@@ -1,6 +1,7 @@
 @echo off
 setlocal
-cd /d "%~dp0"
+cd /d "%~dp0.."
+set "ROOT=%CD%"
 
 where dotnet >nul 2>nul
 if errorlevel 1 (
@@ -12,11 +13,11 @@ if errorlevel 1 (
   exit /b 1
 )
 
-set "APPDATA=%~dp0.appdata"
-set "NUGET_PACKAGES=%~dp0.nuget\packages"
+set "APPDATA=%ROOT%\.appdata"
+set "NUGET_PACKAGES=%ROOT%\.nuget\packages"
 if not exist "%APPDATA%\NuGet" mkdir "%APPDATA%\NuGet"
-copy /Y "%~dp0NuGet.Config" "%APPDATA%\NuGet\NuGet.Config" >nul
-dotnet restore "%~dp0WhipCursor.csproj" --configfile "%~dp0NuGet.Config"
+copy /Y "%ROOT%\NuGet.Config" "%APPDATA%\NuGet\NuGet.Config" >nul
+dotnet restore "%ROOT%\WhipCursor.csproj" --configfile "%ROOT%\NuGet.Config"
 if errorlevel 1 pause & exit /b 1
-dotnet build "%~dp0WhipCursor.csproj" --no-restore
+dotnet build "%ROOT%\WhipCursor.csproj" --no-restore
 pause
