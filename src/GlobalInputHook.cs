@@ -11,6 +11,7 @@ public sealed class GlobalInputHook : IDisposable
     private const int WhKeyboardLl = 13;
     private const int WmLButtonDown = 0x0201;
     private const int WmKeyDown = 0x0100;
+    private const int VkF7 = 0x76;
     private const int VkF8 = 0x77;
     private const int VkQ = 0x51;
     private const int VkControl = 0x11;
@@ -29,6 +30,7 @@ public sealed class GlobalInputHook : IDisposable
     }
 
     public event Action<ScreenPoint>? LeftMouseDown;
+    public event Action? F7Pressed;
     public event Action? F8Pressed;
     public event Action? CtrlShiftQPressed;
 
@@ -66,6 +68,9 @@ public sealed class GlobalInputHook : IDisposable
 
             switch (hookStruct.VirtualKeyCode)
             {
+                case VkF7:
+                    F7Pressed?.Invoke();
+                    break;
                 case VkF8:
                     F8Pressed?.Invoke();
                     break;

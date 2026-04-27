@@ -14,6 +14,7 @@ public sealed class WhipController : IDisposable
     private readonly GlobalInputHook _inputHook;
     private readonly NotifyIcon _trayIcon;
     private readonly ToolStripMenuItem _armedItem;
+    private readonly ToolStripMenuItem _muteSfxItem;
     private readonly string _framesPath;
     private readonly string _sfxPath;
     private readonly WhipAnimation _animation;
@@ -33,6 +34,12 @@ public sealed class WhipController : IDisposable
             CheckOnClick = false
         };
 
+        _muteSfxItem = new ToolStripMenuItem("Mute SFX", null, (_, _) => ToggleSfxMuted())
+        {
+            Checked = false,
+            CheckOnClick = false
+        };
+
         var exitItem = new ToolStripMenuItem("Exit", null, (_, _) => _app.Shutdown());
 
         _trayIcon = new NotifyIcon
@@ -43,12 +50,14 @@ public sealed class WhipController : IDisposable
             ContextMenuStrip = new ContextMenuStrip()
         };
         _trayIcon.ContextMenuStrip.Items.Add(_armedItem);
+        _trayIcon.ContextMenuStrip.Items.Add(_muteSfxItem);
         _trayIcon.ContextMenuStrip.Items.Add(new ToolStripSeparator());
         _trayIcon.ContextMenuStrip.Items.Add(exitItem);
         _trayIcon.DoubleClick += (_, _) => ToggleArmed();
 
         _inputHook = new GlobalInputHook();
         _inputHook.LeftMouseDown += HandleLeftMouseDown;
+        _inputHook.F7Pressed += ToggleSfxMuted;
         _inputHook.F8Pressed += ToggleArmed;
         _inputHook.CtrlShiftQPressed += () => _app.Dispatcher.Invoke(_app.Shutdown);
 
@@ -58,7 +67,7 @@ public sealed class WhipController : IDisposable
         _trayIcon.ShowBalloonTip(
             2500,
             "Whip Cursor is ready",
-            "Left-click to whip. F8 arms/disarms. Ctrl+Shift+Q exits.",
+            "Left-click to whip. F7 mutes SFX. F8 arms/disarms. Ctrl+Shift+Q exits.",
             ToolTipIcon.Info);
     }
 
@@ -68,13 +77,40 @@ public sealed class WhipController : IDisposable
         set
         {
             _armedItem.Checked = value;
-            _trayIcon.Text = value ? "Whip Cursor - armed" : "Whip Cursor - disarmed";
+            UpdateTrayText();
+        }
+    }
+
+    private bool IsSfxMuted
+    {
+        get => _muteSfxItem.Checked;
+        set
+        {
+            _muteSfxItem.Checked = value;
+            if (value)
+            {
+                StopActiveSounds();
+            }
+
+            UpdateTrayText();
         }
     }
 
     private void ToggleArmed()
     {
         _app.Dispatcher.BeginInvoke(() => IsArmed = !IsArmed);
+    }
+
+    private void ToggleSfxMuted()
+    {
+        _app.Dispatcher.BeginInvoke(() => IsSfxMuted = !IsSfxMuted);
+    }
+
+    private void UpdateTrayText()
+    {
+        var armedState = IsArmed ? "armed" : "disarmed";
+        var soundState = IsSfxMuted ? ", SFX muted" : "";
+        _trayIcon.Text = $"Whip Cursor - {armedState}{soundState}";
     }
 
     private void HandleLeftMouseDown(ScreenPoint point)
@@ -95,7 +131,7 @@ public sealed class WhipController : IDisposable
     private async void PlaySfxAfterDelay()
     {
         await Task.Delay(WhipSoundDelay);
-        if (!_disposed)
+        if (!_disposed && !IsSfxMuted)
         {
             PlaySfx();
         }
@@ -103,7 +139,7 @@ public sealed class WhipController : IDisposable
 
     private void PlaySfx()
     {
-        if (!File.Exists(_sfxPath))
+        if (IsSfxMuted || !File.Exists(_sfxPath))
         {
             return;
         }
@@ -120,6 +156,14 @@ public sealed class WhipController : IDisposable
     {
         player.Close();
         _activeSounds.Remove(player);
+    }
+
+    private void StopActiveSounds()
+    {
+        foreach (var player in _activeSounds.ToList())
+        {
+            CleanupSound(player);
+        }
     }
 
     private static string FindAssetPath(params string[] parts)
@@ -142,10 +186,7 @@ public sealed class WhipController : IDisposable
 
         _disposed = true;
         _inputHook.Dispose();
-        foreach (var player in _activeSounds.ToList())
-        {
-            CleanupSound(player);
-        }
+        StopActiveSounds();
 
         _trayIcon.Visible = false;
         _trayIcon.Dispose();

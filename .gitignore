@@ -3,3 +3,4 @@ obj/
 .appdata/
 .nuget/
 dist/
+*.lnk
